@@ -11,7 +11,7 @@ def main(argv):
         nb = Naive_Bayes(train_file_data, train_file_meta, test_file_data)
         nb.test()
     if option == 't':
-        tan = TAN(train_file_data, train_file_meta)
+        tan = TAN(train_file_data, train_file_meta, test_file_data)
 
 
 if __name__ == "__main__":

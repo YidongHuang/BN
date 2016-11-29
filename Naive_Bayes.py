@@ -51,7 +51,6 @@ class Naive_Bayes:
                 instance_dict = self.train_dict[self.feature_dict[i]][instance[i]]
                 pos_probability *= (instance_dict[0] * 1.0 + 1)/ (self.num_positive + len(self.train_dict[self.feature_dict[i]]))
                 neg_probability *= (instance_dict[1] * 1.0 + 1) /(self.train_size - self.num_positive  + len(self.train_dict[self.feature_dict[i]]))
-                # print self.train_dict[self.feature_dict[i]
             probability = (pos_probability)/(pos_probability + neg_probability)
             if probability >= 0.5:
                 prediction = self.labels[0]
