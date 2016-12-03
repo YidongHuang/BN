@@ -12,6 +12,7 @@ class TAN:
         self.matrix, self.count_labels, self.prob_table = self.make_matrix()
         self.edges = self.get_edges()
         self.tree, self.y_node = self.get_TAN()
+        self.table = self.make_conditional_prob_table()
         self.test()
 
     def get_edges(self):
@@ -45,6 +46,7 @@ class TAN:
             node = Node.Node(name)
             if i == 0:
                 tree[name] = node
+                node.parent_name = 'class'
                 continue
             if name == 'class':
                 continue
@@ -80,15 +82,13 @@ class TAN:
 
     def get_TAN(self):
         tree = self.get_max_spanning_tree()
-        # for node in tree.values():
-            # print self.train_meta.names().index(node.name)
-            # print [self.train_meta.names().index(n.name) for n in node.children]
         tree_node = Node.Node('class')
         tree_node.children = tree.values()
-        print '{} class'.format(self.train_meta.names()[0])
+        print '{} {}'.format(self.train_meta.names()[0], 'class')
         for i in range(1, len(self.train_meta.names()) - 1):
             node = tree[self.train_meta.names()[i]]
             print '{} {} class'.format(node.name, node.parent_name)
+        print '\t'
         return tree, tree_node
 
     def get_feature_dict(self):
@@ -131,26 +131,62 @@ class TAN:
                 prob_table[index][self.feature_val_list.index(self.train_meta.names()[k] + '_' + instance[k])] += 1
         return matrix, [num_pos, len(self.train_data) - num_pos], prob_table
 
+    def make_conditional_prob_table(self):
+        conditional_prob_dict = {}
+        for node in self.tree.values():
+            if node.name is not self.train_meta.names()[0]:
+                conditional_prob_dict[(node.name, node.parent_name)] = self.compute_feature_conditional_prob(node.name, node.parent_name)
+        return conditional_prob_dict
+
+    def compute_feature_conditional_prob(self, node_name, parent_name):
+        feature_conditional_dict = {}
+        for x_val in self.train_meta[node_name][1]:
+            for y_val in self.train_meta[parent_name][1]:
+                for z_val in self.labels:
+                    z_index = 1
+                    if z_val == self.labels[0]:
+                        z_index = 0
+                    feature_conditional_dict[(x_val, y_val, z_val)] = self.compute_conditional_prob(self.feature_val_list.index(node_name + '_' + x_val),self.feature_val_list.index(parent_name + '_' + y_val), z_index, node_name, parent_name)
+        return feature_conditional_dict
+
+    def compute_conditional_prob(self, x_index, y_index, z_index, x_feature_name, y_feature_name):
+        matrix = self.matrix[z_index]
+        prob_table = self.prob_table[z_index]
+        parent_count = prob_table[y_index]
+        if x_index < y_index:
+            conditional_prob = (matrix[x_index, y_index] + 1) * 1.0/(parent_count + len(self.feature_dict[y_feature_name][1]))
+        else:
+            conditional_prob = (matrix[y_index, x_index] + 1) * 1.0/(parent_count + len(self.feature_dict[y_feature_name][1]))
+        print 'x is {}, y is {}, given z is {}, prob is {}'.format(x_feature_name, y_feature_name, z_index, conditional_prob)
+        return conditional_prob
+
     def test(self):
         correct_prediction = 0
         pos_index = 0
         p_condition = (self.count_labels[pos_index] * 1.0 + 1) / (len(self.train_data) + 2)
         matrix = self.matrix[pos_index]
         for instance in self.test_data:
-            p_root_given_x = (self.prob_table[pos_index][self.feature_val_list.index(self.train_meta.names()[0] + '_' + instance[0])] *1.0 + 1)/(self.count_labels[pos_index] + len(self.train_meta[self.train_meta.names()[0]]))
+            p_root_given_x = (self.prob_table[pos_index][self.feature_val_list.index(self.train_meta.names()[0] + '_' + instance[0])] *1.0 + 1)/(self.count_labels[pos_index] + 2)
             p = p_condition * p_root_given_x
             for i in range(1, len(instance) - 1):
+                # node = self.tree[self.train_meta.names()[i]]
+                # node_parent_name = node.parent_name
+                # node_feature = self.feature_dict[node.name]
+                # node_index =  node_feature[1][node_feature[0].index(instance[i])]
+                # node_parent_feature = self.feature_dict[node_parent_name]
+                # node_parent_index = node_parent_feature[1][node_parent_feature[0].index(instance[self.train_meta.names().index(node_parent_name)])]
+                # if node_parent_index > node_index:
+                #     p *= (matrix[node_index, node_parent_index] * 1.0 + 1)/(self.prob_table[pos_index][node_parent_index] + len(self.train_meta[node_parent_name]))
+                # else:
+                #     p *= (matrix[node_parent_index, node_index] * 1.0 + 1)/(self.prob_table[pos_index][node_parent_index] + len(self.train_meta[node_parent_name]))
+                # num = (matrix[node_parent_index, node_index] * 1.0 + 1)/(self.prob_table[pos_index][node_parent_index] + len(self.train_meta[node_parent_name] * 2))
+                # print 'num is {}'.format(num)
+                # print 'p is {}'.format(p)
                 node = self.tree[self.train_meta.names()[i]]
-                node_parent_name = node.parent_name
-                node_feature = self.feature_dict[node.name]
-                node_index =  node_feature[1][node_feature[0].index(instance[i])]
-                node_parent_feature = self.feature_dict[node_parent_name]
-                node_parent_index = node_parent_feature[1][node_parent_feature[0].index(instance[self.train_meta.names().index(node_parent_name)])]
-                if node_parent_index > node_index:
-                    p *= (matrix[node_index, node_parent_index] * 1.0 + 1)/(self.prob_table[pos_index][node_parent_index] + len(self.train_meta[node_parent_name] * 2))
-                else:
-                    p *= (matrix[node_parent_index, node_index] * 1.0 + 1)/(self.prob_table[pos_index][node_parent_index] + len(self.train_meta[node_parent_name] * 2))
-                1 == 1
+                parent_index = self.train_meta.names().index(node.parent_name)
+                feature_conditional_dict = self.table[(node.name, node.parent_name)]
+                conditional_p = feature_conditional_dict[(instance[i], instance[parent_index], self.labels[pos_index])]
+                p *= conditional_p
             if p > 0.5:
                 prediction = self.labels[0]
             else:
