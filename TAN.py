@@ -192,7 +192,7 @@ class TAN:
             else:
                 prediction = self.labels[1]
                 p = 1-p
-            print '{} {} {}'.format(prediction.replace("'", ""), instance[-1].replace("'",""), p)
+            print '{0} {1} {2:.12f}'.format(prediction.replace("'", ""), instance[-1].replace("'",""), p)
             if prediction == instance[-1]:
                 correct_prediction += 1
         print '\r'

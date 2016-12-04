@@ -42,7 +42,7 @@ class Naive_Bayes:
     def test(self):
         for i in range(len(self.test_data[0]) - 1):
             print '{} class'.format(self.feature_dict[i])
-        print '\t'
+        print '\r'
         correct_prediction = 0
         for instance in self.test_data:
             pos_probability = self.positive_probability
@@ -57,11 +57,11 @@ class Naive_Bayes:
             else:
                 prediction = self.labels[1]
                 probability = 1- probability
-            print '{} {} {}'.format(prediction.replace("'",""), instance[-1].replace("'",""), probability)
+            print '{0} {1} {2:.12f}'.format(prediction.replace("'",""), instance[-1].replace("'",""), probability)
             if prediction == instance[-1]:
                 correct_prediction += 1
 
-        print '\t'
+        print '\r'
         print correct_prediction
         return correct_prediction
 
