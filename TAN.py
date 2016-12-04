@@ -13,7 +13,6 @@ class TAN:
         self.edges = self.get_edges()
         self.tree, self.y_node = self.get_TAN()
         self.table = self.make_conditional_prob_table()
-        self.test()
 
     def get_edges(self):
         edges = collections.OrderedDict()
@@ -88,7 +87,7 @@ class TAN:
         for i in range(1, len(self.train_meta.names()) - 1):
             node = tree[self.train_meta.names()[i]]
             print '{} {} class'.format(node.name, node.parent_name)
-        print '\t'
+        print '\r'
         return tree, tree_node
 
     def get_feature_dict(self):
@@ -154,47 +153,49 @@ class TAN:
         prob_table = self.prob_table[z_index]
         parent_count = prob_table[y_index]
         if x_index < y_index:
-            conditional_prob = (matrix[x_index, y_index] + 1) * 1.0/(parent_count + len(self.feature_dict[y_feature_name][1]))
+            # conditional_prob = (matrix[x_index, y_index] + 1) * 1.0/(parent_count + len(self.feature_dict[y_feature_name][1]))
+            conditional_prob = (matrix[x_index, y_index] + 1) * 1.0 / (parent_count + len(self.feature_dict[x_feature_name][1]))
         else:
-            conditional_prob = (matrix[y_index, x_index] + 1) * 1.0/(parent_count + len(self.feature_dict[y_feature_name][1]))
-        print 'x is {}, y is {}, given z is {}, prob is {}'.format(x_feature_name, y_feature_name, z_index, conditional_prob)
+            # conditional_prob = (matrix[y_index, x_index] + 1) * 1.0/(parent_count + len(self.feature_dict[y_feature_name][1]))
+            conditional_prob = (matrix[y_index, x_index] + 1) * 1.0 / (parent_count + len(self.feature_dict[x_feature_name][1]))
+        # print 'x is {}, y is {}, given z is {}, prob is {}'.format(x_feature_name, y_feature_name, z_index, conditional_prob)
         return conditional_prob
 
     def test(self):
         correct_prediction = 0
-        pos_index = 0
-        p_condition = (self.count_labels[pos_index] * 1.0 + 1) / (len(self.train_data) + 2)
-        matrix = self.matrix[pos_index]
         for instance in self.test_data:
-            p_root_given_x = (self.prob_table[pos_index][self.feature_val_list.index(self.train_meta.names()[0] + '_' + instance[0])] *1.0 + 1)/(self.count_labels[pos_index] + 2)
-            p = p_condition * p_root_given_x
+            pos_index = 0
+            pos_p_condition = (self.count_labels[pos_index] * 1.0 + 1) / (len(self.train_data) + 2)
+            # pos_p_root_given_z = (self.prob_table[pos_index][self.feature_val_list.index(self.train_meta.names()[0] + '_' + instance[0])] * 1.0 + 1) / (self.count_labels[pos_index] + 2)
+            pos_p_root_given_z = (self.prob_table[pos_index][self.feature_val_list.index(self.train_meta.names()[0] + '_' + instance[0])] *1.0 + 1)/(self.count_labels[pos_index] + len(self.train_meta[self.train_meta.names()[0]][1]))
+            pos_p = pos_p_condition * pos_p_root_given_z
             for i in range(1, len(instance) - 1):
-                # node = self.tree[self.train_meta.names()[i]]
-                # node_parent_name = node.parent_name
-                # node_feature = self.feature_dict[node.name]
-                # node_index =  node_feature[1][node_feature[0].index(instance[i])]
-                # node_parent_feature = self.feature_dict[node_parent_name]
-                # node_parent_index = node_parent_feature[1][node_parent_feature[0].index(instance[self.train_meta.names().index(node_parent_name)])]
-                # if node_parent_index > node_index:
-                #     p *= (matrix[node_index, node_parent_index] * 1.0 + 1)/(self.prob_table[pos_index][node_parent_index] + len(self.train_meta[node_parent_name]))
-                # else:
-                #     p *= (matrix[node_parent_index, node_index] * 1.0 + 1)/(self.prob_table[pos_index][node_parent_index] + len(self.train_meta[node_parent_name]))
-                # num = (matrix[node_parent_index, node_index] * 1.0 + 1)/(self.prob_table[pos_index][node_parent_index] + len(self.train_meta[node_parent_name] * 2))
-                # print 'num is {}'.format(num)
-                # print 'p is {}'.format(p)
                 node = self.tree[self.train_meta.names()[i]]
                 parent_index = self.train_meta.names().index(node.parent_name)
                 feature_conditional_dict = self.table[(node.name, node.parent_name)]
                 conditional_p = feature_conditional_dict[(instance[i], instance[parent_index], self.labels[pos_index])]
-                p *= conditional_p
+                pos_p *= conditional_p
+            pos_index = 1
+            neg_p_condition = (self.count_labels[pos_index] * 1.0 + 1) / (len(self.train_data) + 2)
+            # neg_p_root_given_z = (self.prob_table[pos_index][self.feature_val_list.index(self.train_meta.names()[0] + '_' + instance[0])] * 1.0 + 1) / (self.count_labels[pos_index] + 2)
+            neg_p_root_given_z = (self.prob_table[pos_index][self.feature_val_list.index(self.train_meta.names()[0] + '_' + instance[0])] *1.0 + 1)/(self.count_labels[pos_index] + len(self.train_meta[self.train_meta.names()[0]][1]))
+            neg_p = neg_p_condition * neg_p_root_given_z
+            for i in range(1, len(instance) - 1):
+                node = self.tree[self.train_meta.names()[i]]
+                parent_index = self.train_meta.names().index(node.parent_name)
+                feature_conditional_dict = self.table[(node.name, node.parent_name)]
+                conditional_p = feature_conditional_dict[(instance[i], instance[parent_index], self.labels[pos_index])]
+                neg_p *= conditional_p
+            p = pos_p/(pos_p + neg_p)
             if p > 0.5:
                 prediction = self.labels[0]
             else:
                 prediction = self.labels[1]
-                p = 1 - p
-            print '{} {} {}'.format(prediction, instance[-1], p)
+                p = 1-p
+            print '{} {} {}'.format(prediction.replace("'", ""), instance[-1].replace("'",""), p)
             if prediction == instance[-1]:
                 correct_prediction += 1
-        print '\t'
+        print '\r'
         print correct_prediction
+        return correct_prediction
 

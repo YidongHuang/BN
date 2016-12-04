@@ -57,11 +57,12 @@ class Naive_Bayes:
             else:
                 prediction = self.labels[1]
                 probability = 1- probability
-            print '{} {} {}'.format(prediction, instance[-1], probability)
+            print '{} {} {}'.format(prediction.replace("'",""), instance[-1].replace("'",""), probability)
             if prediction == instance[-1]:
                 correct_prediction += 1
 
         print '\t'
         print correct_prediction
+        return correct_prediction
 
 
